@@ -42,7 +42,6 @@ jobs:
           echo "Found UF2 file: $UF2_FILE"
           mv "$UF2_FILE" .pio/build/pico/picodrum.uf2
 
-
       - name: Create GitHub Release
         id: create_release
         if: steps.version_increment.outputs.version
