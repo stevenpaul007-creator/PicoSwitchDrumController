@@ -44,27 +44,30 @@ const uint8_t ReportDesc[] = {
 
 const uint16_t ReportDescLen = sizeof(ReportDesc);
 
-// 字符串描述符：语言 ID。
+// 字符串描述符：语言 ID / 厂商 / 产品 / 版本。
 const uint8_t LangDes[] = {0x04, 0x03, 0x09, 0x04};
 const uint16_t LangDesLen = sizeof(LangDes);
 
-// 产品字符串。
+const uint8_t Manuf_Des[] = {
+    0x1C, 0x03,
+    'H', 0x00, 'O', 0x00, 'R', 0x00, 'I', 0x00, ' ', 0x00, 'C', 0x00, 'O', 0x00,
+    '.', 0x00, 'L', 0x00, 'T', 0x00, 'D', 0x00, '.', 0x00
+};
+const uint16_t Manuf_DesLen = sizeof(Manuf_Des);
+
 const uint8_t Prod_Des[] = {
-    0x26, 0x03,
-    'P', 0x00, 'I', 0x00, 'C', 0x00, 'O', 0x00, ' ', 0x00, ' ', 0x00,
-    'T', 0x00, 'A', 0x00, 'I', 0x00, 'K', 0x00, 'O', 0x00, ' ', 0x00,
-    'H', 0x00, 'I', 0x00, 'T', 0x00, 'B', 0x00, 'O', 0x00, 'X', 0x00
+    0x24, 0x03,
+    'P', 0x00, 'O', 0x00, 'K', 0x00, 'K', 0x00, 'E', 0x00, 'N', 0x00, ' ', 0x00,
+    'C', 0x00, 'O', 0x00, 'N', 0x00, 'T', 0x00, 'R', 0x00, 'O', 0x00, 'L', 0x00,
+    'L', 0x00, 'E', 0x00, 'R', 0x00
 };
 const uint16_t Prod_DesLen = sizeof(Prod_Des);
 
-// 厂商字符串。
-const uint8_t Manuf_Des[] = {
-    0x26, 0x03,
-    'P', 0x00, 'I', 0x00, 'C', 0x00, 'O', 0x00, ' ', 0x00, ' ', 0x00,
-    'T', 0x00, 'A', 0x00, 'I', 0x00, 'K', 0x00, 'O', 0x00, ' ', 0x00,
-    'H', 0x00, 'I', 0x00, 'T', 0x00, 'B', 0x00, 'O', 0x00, 'X', 0x00
+static const uint8_t Version_Des[] = {
+    0x08, 0x03,
+    '1', 0x00, '.', 0x00, '0', 0x00
 };
-const uint16_t Manuf_DesLen = sizeof(Manuf_Des);
+static const uint16_t Version_DesLen = sizeof(Version_Des);
 
 // TinyUSB 字符串描述符转换缓存。
 static uint16_t string_desc[32];
@@ -109,6 +112,8 @@ uint16_t const *tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
       return copy_utf16le_descriptor(Manuf_Des);
     case 2:
       return copy_utf16le_descriptor(Prod_Des);
+    case 3:
+      return copy_utf16le_descriptor(Version_Des);
     default:
       return NULL;
   }
@@ -133,4 +138,51 @@ uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id, hid_report_t
   (void)buffer;
   (void)reqlen;
   return 0;
+}
+
+// Earle Philhower Arduino core 的预编译 TinyUSB 配置启用了 MSC 类。
+// 当前固件的配置描述符不暴露 MSC 接口；这些空实现只用于满足链接器，
+// 实际枚举路径仍然只返回上面的自定义 HID 配置描述符。
+int32_t tud_msc_read10_cb(uint8_t lun, uint32_t lba, uint32_t offset, void *buffer, uint32_t bufsize) {
+  (void)lun;
+  (void)lba;
+  (void)offset;
+  (void)buffer;
+  (void)bufsize;
+  return -1;
+}
+
+int32_t tud_msc_write10_cb(uint8_t lun, uint32_t lba, uint32_t offset, uint8_t *buffer, uint32_t bufsize) {
+  (void)lun;
+  (void)lba;
+  (void)offset;
+  (void)buffer;
+  (void)bufsize;
+  return -1;
+}
+
+void tud_msc_inquiry_cb(uint8_t lun, uint8_t vendor_id[8], uint8_t product_id[16], uint8_t product_rev[4]) {
+  (void)lun;
+  memcpy(vendor_id, "PICO    ", 8);
+  memcpy(product_id, "TAIKO HID       ", 16);
+  memcpy(product_rev, "0001", 4);
+}
+
+bool tud_msc_test_unit_ready_cb(uint8_t lun) {
+  (void)lun;
+  return false;
+}
+
+void tud_msc_capacity_cb(uint8_t lun, uint32_t *block_count, uint16_t *block_size) {
+  (void)lun;
+  *block_count = 0;
+  *block_size = 512;
+}
+
+int32_t tud_msc_scsi_cb(uint8_t lun, uint8_t const scsi_cmd[16], void *buffer, uint16_t bufsize) {
+  (void)lun;
+  (void)scsi_cmd;
+  (void)buffer;
+  (void)bufsize;
+  return -1;
 }

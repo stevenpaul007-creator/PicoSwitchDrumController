@@ -7,16 +7,15 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-//ybxa---xyab
+
 // -----------------------------
 // Switch 按键位定义
 // -----------------------------
 #define BUTTON_NONE 0x0000
-#define BUTTON_Y 0x0008
-#define BUTTON_B 0x0001
-#define BUTTON_A 0x0002
-#define BUTTON_X 0x0004
-
+#define BUTTON_Y 0x0001
+#define BUTTON_B 0x0002
+#define BUTTON_A 0x0004
+#define BUTTON_X 0x0008
 
 #define BUTTON_L 0x0010
 #define BUTTON_R 0x0020

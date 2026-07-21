@@ -29,8 +29,12 @@ static const uint8_t kHatPins[] = {10, 11, 12, 13};
 //   ADC2 / GPIO27 -> A
 //   ADC3 / GPIO28 -> DOWN
 //   ADC4 / GPIO29 -> LEFT
+// 暴击阈值：任意一组达到 900 时触发组合键。
+//   B 或 DOWN 暴击 -> 同时按下 B + DOWN
+//   A 或 LEFT 暴击 -> 同时按下 A + LEFT
 static const uint8_t kAdcPins[] = {26, 27, 28, 29};
 static const uint16_t kAdcThresholds[] = {600, 600, 600, 600};
+static const uint16_t kAdcCriticalThresholds[] = {900, 900, 900, 900};
 // 单次 ADC 触发保持为按下的时间（微秒），至少 30ms。
 static const uint32_t kAdcPressUs = 30000;
 // 同一通道两次触发之间的最短间隔（微秒）。
@@ -70,12 +74,15 @@ typedef struct {
   uint64_t changed_at_us;
 } DebounceState;
 
-// 单路 ADC 的峰值触发状态：last_active 记录上次是否高于阈值，
-// pressed_until_us 控制按键保持时长，cooldown_until_us 防止同一尖峰重复触发。
+// 单路 ADC 的峰值触发状态：last_active/last_critical_active 记录上次是否高于阈值，
+// pressed_until_us/critical_pressed_until_us 控制按键保持时长，cooldown 防止同一尖峰重复触发。
 typedef struct {
   bool last_active;
+  bool last_critical_active;
   uint64_t pressed_until_us;
+  uint64_t critical_pressed_until_us;
   uint64_t cooldown_until_us;
+  uint64_t critical_cooldown_until_us;
 } AdcTriggerState;
 
 #if ENABLE_LED_FEEDBACK
@@ -231,12 +238,16 @@ static void adc_core1_entry(void) {
 
   while (true) {
     const uint64_t now = now_us();
+    uint32_t next_adc_button_bits = 0;
+    uint32_t next_adc_hat_bits = 0;
 
     for (uint8_t i = 0; i < 4; ++i) {
       adc_select_input(i);
       const uint16_t sample = adc_read();
       const bool active = adc_sample_active(sample, kAdcThresholds[i]);
+      const bool critical_active = adc_sample_active(sample, kAdcCriticalThresholds[i]);
       const bool rising_edge = active && !adc_state[i].last_active;
+      const bool critical_rising_edge = critical_active && !adc_state[i].last_critical_active;
 
       if (rising_edge && now >= adc_state[i].cooldown_until_us) {
         adc_state[i].pressed_until_us = now + kAdcPressUs;
@@ -283,42 +294,60 @@ static void adc_core1_entry(void) {
 #endif
       }
 
+      if (critical_rising_edge && now >= adc_state[i].critical_cooldown_until_us) {
+        adc_state[i].critical_pressed_until_us = now + kAdcPressUs;
+        adc_state[i].critical_cooldown_until_us = now + kAdcCooldownUs;
+      }
+
       adc_state[i].last_active = active;
+      adc_state[i].last_critical_active = critical_active;
 
       const bool pressed = now < adc_state[i].pressed_until_us;
+      const bool critical_pressed = now < adc_state[i].critical_pressed_until_us;
       switch (i) {
         case 0:
           if (pressed) {
-            g_adc_button_bits |= ADC_BIT_B;
-          } else {
-            g_adc_button_bits &= (uint32_t)~ADC_BIT_B;
+            next_adc_button_bits |= ADC_BIT_B;
+          }
+          if (critical_pressed) {
+            next_adc_button_bits |= ADC_BIT_B;
+            next_adc_hat_bits |= ADC_BIT_DOWN;
           }
           break;
         case 1:
           if (pressed) {
-            g_adc_button_bits |= ADC_BIT_A;
-          } else {
-            g_adc_button_bits &= (uint32_t)~ADC_BIT_A;
+            next_adc_button_bits |= ADC_BIT_A;
+          }
+          if (critical_pressed) {
+            next_adc_button_bits |= ADC_BIT_A;
+            next_adc_hat_bits |= ADC_BIT_LEFT;
           }
           break;
         case 2:
           if (pressed) {
-            g_adc_hat_bits |= ADC_BIT_DOWN;
-          } else {
-            g_adc_hat_bits &= (uint32_t)~ADC_BIT_DOWN;
+            next_adc_hat_bits |= ADC_BIT_DOWN;
+          }
+          if (critical_pressed) {
+            next_adc_button_bits |= ADC_BIT_B;
+            next_adc_hat_bits |= ADC_BIT_DOWN;
           }
           break;
         case 3:
           if (pressed) {
-            g_adc_hat_bits |= ADC_BIT_LEFT;
-          } else {
-            g_adc_hat_bits &= (uint32_t)~ADC_BIT_LEFT;
+            next_adc_hat_bits |= ADC_BIT_LEFT;
+          }
+          if (critical_pressed) {
+            next_adc_button_bits |= ADC_BIT_A;
+            next_adc_hat_bits |= ADC_BIT_LEFT;
           }
           break;
         default:
           break;
       }
     }
+
+    g_adc_button_bits = next_adc_button_bits;
+    g_adc_hat_bits = next_adc_hat_bits;
 
     // 适当让出一点时间，避免 ADC 轮询过于紧密。
     sleep_us(100);
