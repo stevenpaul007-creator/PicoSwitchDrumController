@@ -37,7 +37,7 @@ jobs:
         run: pip install --upgrade platformio
       - name: Build PlatformIO Project
         run: |
-          pio run --environment pico
+          pio run
           UF2_FILE=$(find .pio/build/pico -name "*.uf2" | head -n 1)
           echo "Found UF2 file: $UF2_FILE"
           mv "$UF2_FILE" .pio/build/pico/picodrum.uf2
