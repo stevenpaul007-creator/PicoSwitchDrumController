@@ -1,68 +1,51 @@
 name: PlatformIO CI
 
-on: [push]
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:   # 允许手动触发
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. 检出代码
       - name: Checkout code
         uses: actions/checkout@v4
-          
-      - name: Get next version
-        id: version_increment
-        uses: reecetech/version-increment@2024.10.1
+
+      # 2. 安装 Python（PlatformIO 依赖）
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          increment: 'patch'
-          scheme: 'semver'
-        
-      - name: Cache PlatformIO directories
-        id: cache-pio
+          python-version: '3.11'
+
+      # 3. 安装 PlatformIO Core
+      - name: Install PlatformIO Core
+        run: |
+          python -m pip install --upgrade pip
+          pip install platformio
+
+      # 4. 缓存 PlatformIO 依赖（大幅加速后续构建）
+      - name: Cache PlatformIO packages
         uses: actions/cache@v4
         with:
           path: |
-            ~/.cache/pip
             ~/.platformio
-          # Use a hash of the project configuration to invalidate the cache.
+            ~/.cache/pip
           key: ${{ runner.os }}-pio-${{ hashFiles('**/platformio.ini') }}
           restore-keys: |
-            ${{ runner.os }}-pio-${{ hashFiles('**/platformio.ini') }}
-          
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          
-      - name: Install PlatformIO Core
-        run: pip install --upgrade platformio
-      
-          
-      - name: Build PlatformIO Project
-        run: |
-          pio run
-          UF2_FILE=$(find .pio/build/pico -name "*.uf2" | head -n 1)
-          echo "Found UF2 file: $UF2_FILE"
-          mv "$UF2_FILE" .pio/build/pico/picodrum.uf2
+            ${{ runner.os }}-pio-
 
+      # 5. 编译项目（使用您本地的环境配置）
+      - name: Build firmware
+        run: pio run
 
-      - name: Create GitHub Release
-        id: create_release
-        if: steps.version_increment.outputs.version
-        uses: actions/create-release@v1
+      # （可选）上传编译产物
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: v${{ steps.version_increment.outputs.version }}
-          release_name: Release v${{ steps.version_increment.outputs.version }}
-          body: New patch release triggered by push.
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload UF2 to Release
-        if: steps.create_release.outputs.upload_url
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: .pio/build/pico/picodrum.uf2
-          asset_name: picodrum.uf2
-          asset_content_type: application/octet-stream
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: firmware
+          path: .pio/build/pico/firmware.uf2
