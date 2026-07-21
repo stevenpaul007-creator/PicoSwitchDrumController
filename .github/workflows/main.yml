@@ -27,6 +27,19 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install platformio
+
+          
+      - name: Cache PlatformIO packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: ${{ runner.os }}-pio-${{ hashFiles('**/platformio.ini') }}
+          restore-keys: |
+            ${{ runner.os }}-pio-
+      
+      # 新增这一行：强制重装平台，确保 framework-picosdk 被安装
+      - name: Reinstall platform to ensure full dependencies
+        run: pio platform install raspberrypi@1.20.0
         
       # 5. 编译项目（使用您本地的环境配置）
       - name: Build firmware
