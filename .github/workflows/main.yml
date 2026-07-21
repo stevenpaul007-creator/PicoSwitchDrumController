@@ -36,16 +36,10 @@ jobs:
       - name: Install PlatformIO Core
         run: pip install --upgrade platformio
       
-      - name: Build with specific Pico SDK version
-        run: |
-          # 使用 -O 参数注入 platform_packages
-          # 注意：picosdk 框架对应的包名需要确认
-          pio run -O "platform_packages=framework-arduino-mbed@https://github.com/arduino/ArduinoCore-mbed.git#aa70b80"
-
           
       - name: Build PlatformIO Project
         run: |
-          pio run
+          pio run -p "raspberrypi@1.20.0"
           UF2_FILE=$(find .pio/build/pico -name "*.uf2" | head -n 1)
           echo "Found UF2 file: $UF2_FILE"
           mv "$UF2_FILE" .pio/build/pico/picodrum.uf2
