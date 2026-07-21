@@ -37,13 +37,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pio-
       
-      # 新增这一行：强制重装平台，确保 framework-picosdk 被安装
-      - name: Reinstall platform to ensure full dependencies
-        run: pio pkg install -g -p https://github.com/blackketter/wizio-pico/archive/refs/heads/main.zip
         
       # 5. 编译项目（使用您本地的环境配置）
       - name: Build firmware
-        run: pio run -t clean; pio run -v
+        run: pio run -v
 
       # （可选）上传编译产物
       - name: Upload firmware artifact
