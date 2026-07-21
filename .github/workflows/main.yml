@@ -40,7 +40,7 @@ jobs:
         
       # 5. 编译项目（使用您本地的环境配置）
       - name: Build firmware
-        run: pio boards; pio run -v
+        run: pio boards; pio run
 
       # （可选）上传编译产物
       - name: Upload firmware artifact
