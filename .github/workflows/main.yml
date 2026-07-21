@@ -35,11 +35,14 @@ jobs:
           
       - name: Install PlatformIO Core
         run: pip install --upgrade platformio
-        
-      - name: Pre-install specific Raspberry Pi Platform
+      
+      - name: Build with specific Pico SDK version
         run: |
-          pio pkg install --global --platform "raspberrypi@1.20.0+sha.aa70b80"
-        
+          # 使用 -O 参数注入 platform_packages
+          # 注意：picosdk 框架对应的包名需要确认
+          pio run -O "platform_packages=framework-arduino-mbed@https://github.com/arduino/ArduinoCore-mbed.git#aa70b80"
+
+          
       - name: Build PlatformIO Project
         run: |
           pio run
