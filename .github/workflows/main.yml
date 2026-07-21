@@ -35,6 +35,11 @@ jobs:
           
       - name: Install PlatformIO Core
         run: pip install --upgrade platformio
+        
+      - name: Pre-install specific Raspberry Pi Platform
+        run: |
+          pio pkg install --global --platform "raspberrypi@1.20.0+sha.aa70b80"
+        
       - name: Build PlatformIO Project
         run: |
           pio run
