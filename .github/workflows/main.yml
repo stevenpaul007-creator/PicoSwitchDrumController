@@ -39,7 +39,7 @@ jobs:
       
       # 新增这一行：强制重装平台，确保 framework-picosdk 被安装
       - name: Reinstall platform to ensure full dependencies
-        run: pio pkg install raspberrypi@1.20.0; pio pkg install https://github.com/Wiz-IO/wizio-pico
+        run: pio pkg install https://github.com/Wiz-IO/wizio-pico
         
       # 5. 编译项目（使用您本地的环境配置）
       - name: Build firmware
