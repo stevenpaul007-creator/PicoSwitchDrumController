@@ -1,0 +1,66 @@
+name: PlatformIO CI
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+          
+      - name: Get next version
+        id: version_increment
+        uses: reecetech/version-increment@2024.10.1
+        with:
+          increment: 'patch'
+          scheme: 'semver'
+        
+      - name: Cache PlatformIO directories
+        id: cache-pio
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.platformio
+          # Use a hash of the project configuration to invalidate the cache.
+          key: ${{ runner.os }}-pio-${{ hashFiles('**/platformio.ini') }}
+          restore-keys: |
+            ${{ runner.os }}-pio-${{ hashFiles('**/platformio.ini') }}
+          
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install PlatformIO Core
+        run: pip install --upgrade platformio
+      - name: Build PlatformIO Project
+        run: |
+          pio run --environment pico
+          UF2_FILE=$(find .pio/build/pico -name "*.uf2" | head -n 1)
+          echo "Found UF2 file: $UF2_FILE"
+          mv "$UF2_FILE" .pio/build/pico/picodrum.uf2
+
+
+      - name: Create GitHub Release
+        id: create_release
+        if: steps.version_increment.outputs.version
+        uses: actions/create-release@v1
+        with:
+          tag_name: v${{ steps.version_increment.outputs.version }}
+          release_name: Release v${{ steps.version_increment.outputs.version }}
+          body: New patch release triggered by push.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload UF2 to Release
+        if: steps.create_release.outputs.upload_url
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: .pio/build/pico/picodrum.uf2
+          asset_name: picodrum.uf2
+          asset_content_type: application/octet-stream
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
