@@ -1,6 +1,12 @@
-# RP2040SwitchControl
+# PicoSwitchDrumController
 
 这是一个面向 **RP2040 + PlatformIO + Earle Philhower Arduino core + TinyUSB HID** 的 Switch 控制器工程。
+
+
+<img src="imgs/18.完成-四鼓.jpg" height="500" alt="Scaled with correct aspect ratio)">
+<img src="imgs/17.测试-三鼓效果.jpg" height="500" alt="Scaled with correct aspect ratio)">
+<img src="imgs/pcb-main.png" height="500" alt="Scaled with correct aspect ratio)">
+<img src="imgs/pcb-sub.png" height="500" alt="Scaled with correct aspect ratio)">
 
 ## 特性
 
